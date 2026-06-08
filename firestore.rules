@@ -1,9 +1,57 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+    // ── HELPERS ULTRA-RÁPIDOS BASADOS EN CLAIMS (0 Consultas de BD) ──────────
+    function conAuth()    { return request.auth != null; } // Verifica si la sesión está activa
+    function getRol()   { return conAuth() && exists(/databases/$(database)/documents/smiles/$(request.auth.token.name)) ? get(/databases/$(database)/documents/smiles/$(request.auth.token.name)).data.rol : 'smile'; }
+    function esAdmin()  { return conAuth() && getRol() == 'admin'; } // Helper explícito para administrador
+    function esGestor() { return conAuth() && getRol() in ['gestor', 'admin']; } // Helper explícito para gestores
+    function esEditor() { return conAuth() && getRol() in ['editor', 'gestor', 'admin']; } // Helper explícito para editores
+    function esUsuario()  { return conAuth() && getRol() == 'usuario'; } // Helper explícito para usuarios estándar
+    function docData()    { return resource == null ? request.resource.data : resource.data; } // Obtiene datos según la operación
+    function isDueno()    { return conAuth() && (docData().uid == request.auth.uid || docData().userId == request.auth.uid || docData().email == request.auth.token.email); } // Valida propiedad de forma automática
+    function maxSize(kb)  { return request.resource == null || request.resource.data.size() < kb * 1024; } // Convierte KB a Bytes (ej: 20 KB = 20480 bytes) para evitar DoS
+
+    // ── REGLAS DE SEGURIDAD POR COLECCIÓN ────────────────────────────────────
+    match /configwii/{doc} { allow read, write: if esAdmin(); } // Config del sistema: Solo admin
+    match /wiMensajes/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
+    match /wiNotas/{doc}       { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
+    match /wiSolicitudes/{doc} { allow read: if isDueno() || esGestor(); allow write: if (isDueno() || esGestor()) && maxSize(20); } // (máx 20KB)
+    match /smiles/{u} { // Perfiles de usuario (smiles): Privado
+      allow get: if conAuth() && (isDueno() || esEditor()); // Solo dueño o gestor/admin leen perfil
+      allow list:   if esEditor(); // Listar 
+      allow delete: if esGestor() || isDueno(); //y borrar solo dueño o gestor/admin
+      allow create: if conAuth() && request.resource.data.uid == request.auth.uid 
+                                 && request.resource.data.rol == 'usuario' 
+                                 && request.resource.data.plan == 'free' 
+                                 && request.resource.data.activo == true 
+                                 && request.resource.data.estado == 'activo' 
+                                 && maxSize(10); // (máx 10KB)
+      allow update: if (isDueno() && request.resource.data.rol == resource.data.rol 
+                                  && request.resource.data.plan == resource.data.plan 
+                                  && maxSize(10)) || esGestor(); // (máx 10KB)
     }
+    match /registros/{u} { // Registro único para evitar usernames y correos duplicados: Público
+      allow get: if true; // Comprobar si un username existe es público
+      allow list: if request.query.limit <= 5; // Listar con límite bajo
+      allow create: if conAuth() && request.resource.data.uid == request.auth.uid 
+                                 && request.resource.data.usuario == u 
+                                 && maxSize(2); // (máx 2KB)
+      allow update: if isDueno() && maxSize(2); // (máx 2KB)
+      allow delete: if esAdmin(); // Solo admin borra
+    }
+    // match /chatGrupal/{doc} {
+    //   allow get: if conAuth() && (isDueno() || esEditor()); // Lectura personal y editores 
+    //   allow list:   if esEditor(); // Listar 
+    //   allow write: if isDueno(); // Solo dueño puede editar
+    // }
+    match /blog/{doc} { // Blog (Público)
+      allow read: if true; // Lectura publica 
+      allow create, delete: if esEditor(); // Solo editor, gestor, admin pueden crear post 
+      allow update: if esEditor() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vistas','likes']); // Publico puede actualizar vistas y likes
+    }
+ 		// match /wimusica/{doc}  { allow read: if true; allow write: if isDueno(); } // Música pública en UNA sola línea corta
+ 		// match /wimusicaLikes/{doc}   { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
+ 		// match /cumples/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // Solo el dueño tiene acceso. 
   }
 }
