@@ -1,0 +1,2 @@
+// Placeholder datawii.js
+export {};
