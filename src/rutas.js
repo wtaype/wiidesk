@@ -76,6 +76,7 @@ export const NAV = {
 export const RUTAS = [
   { path: '/inicio',   area: 'todos/' },
   { path: '/login',    area: 'todos/' },
+  { path: '/loginpc',    area: 'todos/' },
   { path: '/registrado',   area: 'editor/' },
   { path: '/blog',     area: 'editor/blog/' },
   { path: '/post',     area: 'editor/blog/'    }, 
