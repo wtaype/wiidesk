@@ -1,4 +1,5 @@
 import './login.css';
+import './loginpc.js';
 import { auth, db } from '../firebase.js';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile,
          sendEmailVerification, sendPasswordResetEmail, signOut, GoogleAuthProvider, signInWithPopup, deleteUser } from 'firebase/auth';
