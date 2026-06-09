@@ -51,5 +51,9 @@ service cloud.firestore {
       allow update: if esEditor() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vistas','likes']); // Publico puede actualizar vistas y likes
     }
     match /sessiones/{doc}  { allow read: if true; allow write: if isDueno(); } // Música pública en UNA sola línea corta
+    match /codigos_device/{doc} { allow read, write: if true && maxSize(15); } // Flujo de dispositivo de Tauri
+    match /sesiones_m2p/{doc} { allow read, write: if true && maxSize(20); } // Señalización WebRTC
+    match /codigos/{doc} { allow read, write: if true && maxSize(10); } // Vinculación de dispositivo
+    match /equipos/{doc} { allow read, write: if conAuth() && (resource == null || resource.data.ownerUid == request.auth.uid || request.resource.data.ownerUid == request.auth.uid) && maxSize(10); } // Equipos del usuario
   }
 }
