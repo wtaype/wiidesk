@@ -229,7 +229,7 @@ const checkField = async (el, forzarTip = false) => {
 
   let ok = true;
   if (id === 'regEmail') {
-    const rl = wiRateLimit('regValidacion', 7);
+    const rl = wiRateLimit('regValidacion', 8);
     if (!rl.ok) {
       el.dataset.ok = 'false';
       wiTip(el, `Demasiados intentos. Espera ${rl.min} min`, 'error', 2500);

@@ -40,18 +40,16 @@ service cloud.firestore {
       allow update: if isDueno() && maxSize(2); // (máx 2KB)
       allow delete: if esAdmin(); // Solo admin borra
     }
-    // match /chatGrupal/{doc} {
-    //   allow get: if conAuth() && (isDueno() || esEditor()); // Lectura personal y editores 
-    //   allow list:   if esEditor(); // Listar 
-    //   allow write: if isDueno(); // Solo dueño puede editar
-    // }
+    match /chatGrupal/{doc} {
+      allow get: if conAuth() && (isDueno() || esEditor()); // Lectura personal y editores 
+      allow list:   if esEditor(); // Listar 
+      allow write: if isDueno(); // Solo dueño puede editar
+    }
     match /blog/{doc} { // Blog (Público)
       allow read: if true; // Lectura publica 
       allow create, delete: if esEditor(); // Solo editor, gestor, admin pueden crear post 
       allow update: if esEditor() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vistas','likes']); // Publico puede actualizar vistas y likes
     }
- 		// match /wimusica/{doc}  { allow read: if true; allow write: if isDueno(); } // Música pública en UNA sola línea corta
- 		// match /wimusicaLikes/{doc}   { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
- 		// match /cumples/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // Solo el dueño tiene acceso. 
+    match /sessiones/{doc}  { allow read: if true; allow write: if isDueno(); } // Música pública en UNA sola línea corta
   }
 }
