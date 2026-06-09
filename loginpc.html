@@ -133,7 +133,7 @@
     <i class="fa-solid fa-circle-check success-icon"></i>
     <h1>¡Autenticación con éxito!</h1>
     <p id="successMessage">Te has autenticado correctamente. Ya puedes regresar a Wiidesk en Windows.</p>
-    <p style="font-size: 11px; color: #795548;">
+    <p id="redirectMessage" style="font-size: 11px; color: #795548;">
       <i class="fa-solid fa-circle-notch fa-spin"></i> Redirigiendo a la aplicación...
     </p>
   </div>
@@ -218,6 +218,12 @@
       // Redirigir rápido en 100ms
       setTimeout(() => {
         window.location.href = `wiidesk://auth?idToken=${activeTokens.idToken}&accessToken=${activeTokens.accessToken}`;
+        
+        // Cambiar mensaje tras iniciar redirección
+        const msg = document.getElementById("redirectMessage");
+        if (msg) {
+          msg.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #29C72E;"></i> Ya puedes usar la app con tu cuenta.`;
+        }
       }, 100);
     }
 
