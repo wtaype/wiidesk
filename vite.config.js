@@ -7,7 +7,10 @@ export default defineConfig({
     sourcemap: false,
     modulePreload: false,
     rollupOptions: {
-      input: 'index.html',
+      input: {
+        main: 'index.html',
+        loginpc: 'loginpc.html'
+      },
       output: {
         manualChunks: id => {
           if (id.includes('node_modules')) return id.includes('firebase') ? 'firebase' : 'vendor';
