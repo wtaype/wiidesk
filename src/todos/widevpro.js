@@ -588,7 +588,7 @@ export const render = () => {
             </div>
             <p class="wvp_tool_desc">Utilidades destinadas a procesar nombres de perfil completos para extraer la inicial de avatar y nombres cortos.</p>
             <div class="wvp_action_zone">
-              <input type="text" class="wvp_input" id="name_helper_inp" value="wilder clemente taype pariona">
+              <input type="text" class="wvp_input" id="name_helper_inp" value="Juan Doe">
             </div>
             <div class="wvp_console"><span class="wvp_console_header">Resultados Formateados</span><div id="log_names">Escribe en el input de arriba.</div></div>
           </article>
