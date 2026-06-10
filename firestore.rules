@@ -9,9 +9,10 @@ service cloud.firestore {
     function esEditor() { return conAuth() && getRol() in ['editor', 'gestor', 'admin']; } // Helper explícito para editores
     function esUsuario()  { return conAuth() && getRol() == 'usuario'; } // Helper explícito para usuarios estándar
     function docData()    { return resource == null ? request.resource.data : resource.data; } // Obtiene datos según la operación
-    function isDueno()    { return conAuth() && (docData().uid == request.auth.uid || docData().userId == request.auth.uid || docData().email == request.auth.token.email); } // Valida propiedad de forma automática
     function maxSize(kb)  { return request.resource == null || request.resource.data.size() < kb * 1024; } // Convierte KB a Bytes (ej: 20 KB = 20480 bytes) para evitar DoS
-
+    function isDueno() { 
+      return conAuth() && (docData().uid == request.auth.uid || docData().userId == request.auth.uid || docData().email == request.auth.token.email); 
+    } // Valida propiedad de forma automática
     // ── REGLAS DE SEGURIDAD POR COLECCIÓN ────────────────────────────────────
     match /configwii/{doc} { allow read, write: if esAdmin(); } // Config del sistema: Solo admin
     match /wiMensajes/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
@@ -50,14 +51,10 @@ service cloud.firestore {
       allow create, delete: if esEditor(); // Solo editor, gestor, admin pueden crear post 
       allow update: if esEditor() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vistas','likes']); // Publico puede actualizar vistas y likes
     }
-    match /lab/{doc}  { allow read, write: if conAuth(); } //
-    match /codigos_device/{doc} { allow read, write: if true && maxSize(15); } // Flujo de dispositivo de Tauri
-    match /sesiones_m2p/{doc} { allow read, write: if true && maxSize(20); } // Señalización WebRTC
-    match /codigos/{doc} { allow read, write: if true && maxSize(10); } // Vinculación de dispositivo
-    match /equipos/{doc} { allow read, write: if conAuth() && (resource == null || resource.data.ownerUid == request.auth.uid || request.resource.data.ownerUid == request.auth.uid) && maxSize(10); } // Equipos del usuario
-    match /control/{doc} {
-      allow read: if conAuth() && (resource == null || resource.data.uid == request.auth.uid);
-      allow write: if conAuth() && (resource == null || resource.data.uid == request.auth.uid) && (request.resource == null || request.resource.data.uid == request.auth.uid) && maxSize(10);
+    match /equipos/{doc} {allow read, write: if isDueno() && maxSize(10); } // Equipos del usuario: solo el dueño (userId) lee/escribe su configuración. Límite 10KB.
+    match /pcs/{doc} {
+      allow read: if conAuth(); // Validación AnyDesk: cualquier usuario autenticado puede leer y traducir el código de 9 dígitos.
+      allow write: if isDueno() && maxSize(10); // Registro de PC: solo el dueño (userId) puede registrar o actualizar su código único. Límite 10KB.
     }
   }
 }
