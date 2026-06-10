@@ -19,19 +19,20 @@ service cloud.firestore {
     match /wiMensajes/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
     match /wiNotas/{doc}       { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
     match /wiSolicitudes/{doc} { allow read: if isDueno() || esGestor(); allow write: if (isDueno() || esGestor()) && maxSize(20); } // (máx 20KB)
-    match /smiles/{u} { // Perfiles de usuario (smiles): Privado
-      allow get: if conAuth() && (isDueno() || esEditor()); // Solo dueño o gestor/admin leen perfil
-      allow list:   if esEditor(); // Listar 
-      allow delete: if esGestor() || isDueno(); //y borrar solo dueño o gestor/admin
-      allow create: if conAuth() && request.resource.data.uid == request.auth.uid 
-                                 && request.resource.data.rol == 'usuario' 
-                                 && request.resource.data.plan == 'free' 
-                                 && request.resource.data.activo == true 
-                                 && request.resource.data.estado == 'activo' 
-                                 && maxSize(10); // (máx 10KB)
-      allow update: if (isDueno() && request.resource.data.rol == resource.data.rol 
-                                  && request.resource.data.plan == resource.data.plan 
-                                  && maxSize(10)) || esGestor(); // (máx 10KB)
+    match /smiles/{u} { // Primero, Firebase Auth verifica → Firestore confirma ownership luego hacen login seguro.
+      allow get:    if conAuth() && (resource.data.get('uid','') == request.auth.uid || esEditor());
+      allow list:   if esEditor();
+      allow delete: if esGestor() || isDueno();
+      allow create: if conAuth() && request.resource.data.uid == request.auth.uid
+                                 && request.resource.data.rol == 'usuario'
+                                 && request.resource.data.plan == 'free'
+                                 && request.resource.data.activo == true
+                                 && request.resource.data.estado == 'activo'
+                                 && maxSize(10);
+      allow update: if ((isDueno() || resource.data.get('uid','') == request.auth.uid)
+                        && request.resource.data.rol  == resource.data.rol
+                        && request.resource.data.plan == resource.data.plan
+                        && maxSize(10)) || esGestor();
     }
     match /registros/{u} { // Registro único para evitar usernames y correos duplicados: Público
       allow get: if true; // Comprobar si un username existe es público
