@@ -157,7 +157,7 @@ const entrar = wi => {
   if (wi?.tema) { localStorage.wiTema = wi.tema; tema(wi.tema); }
   if (esModal()) cerrarTodos();
   Mensaje(`<i class="fa-solid fa-hand-wave"></i> Bienvenido ${wi?.nombre || ''}`, 'success');
-  setDoc(doc(db, 'smiles', wi.usuario), { ultActividad: serverTimestamp() }, { merge: true }).catch(console.error);
+  setDoc(doc(db, 'smiles', wi.usuario), { ultActividad: serverTimestamp(), userId: wi.uid }, { merge: true }).catch(console.error);
   if (auth.currentUser && auth.currentUser.displayName !== wi.usuario) {
     updateProfile(auth.currentUser, { displayName: wi.usuario })
       .then(() => auth.currentUser.getIdToken(true))
@@ -274,7 +274,7 @@ const checkField = async (el, forzarTip = false) => {
 const crearPerfilAtomico = async (user, wi, esCorreo = false) => {
   const batch = writeBatch(db);
   batch.set(doc(db, 'smiles', wi.usuario), wi);
-  batch.set(doc(db, 'registros', wi.usuario), { usuario: wi.usuario, email: wi.email, uid: wi.uid, creado: serverTimestamp() });
+  batch.set(doc(db, 'registros', wi.usuario), { usuario: wi.usuario, email: wi.email, uid: wi.uid, userId: wi.uid, creado: serverTimestamp() });
 
   try {
     // 1. Escribir en base de datos en un lote único
@@ -399,6 +399,7 @@ if (typeof window !== 'undefined') {
             activo: true,
             estado: 'activo',
             uid: user.uid,
+            userId: user.uid,
             terminos: true,
             terminosFecha: serverTimestamp(),
             tema: localStorage.wiTema || 'Oro|#FFC107',
@@ -470,6 +471,7 @@ if (typeof window !== 'undefined') {
             activo: true,
             estado: 'activo',
             uid: user.uid,
+            userId: user.uid,
             terminos: true,
             terminosFecha: serverTimestamp(),
             tema: localStorage.wiTema || 'Oro|#FFC107',
@@ -512,7 +514,7 @@ if (typeof window !== 'undefined') {
       setTimeout(async () => {
         const t = localStorage.wiTema; if (!t) return;
         try {
-          await setDoc(doc(db, 'smiles', wi.usuario), { tema: t, actualizado: serverTimestamp() }, { merge: true });
+          await setDoc(doc(db, 'smiles', wi.usuario), { tema: t, userId: wi.uid, actualizado: serverTimestamp() }, { merge: true });
           savels('wiSmile', { ...wi, tema: t }, 7);
           Mensaje(`Tema ${t.split('|')[0]} guardado <i class="fas fa-check-circle"></i>`, 'success');
         } catch (errCode) { console.error('tema:', errCode); }

@@ -8,11 +8,12 @@ service cloud.firestore {
     function esGestor() { return conAuth() && getRol() in ['gestor', 'admin']; } // Helper explícito para gestores
     function esEditor() { return conAuth() && getRol() in ['editor', 'gestor', 'admin']; } // Helper explícito para editores
     function esUsuario()  { return conAuth() && getRol() == 'usuario'; } // Helper explícito para usuarios estándar
-    function docData()    { return resource == null ? request.resource.data : resource.data; } // Obtiene datos según la operación
     function maxSize(kb)  { return request.resource == null || request.resource.data.size() < kb * 1024; } // Convierte KB a Bytes (ej: 20 KB = 20480 bytes) para evitar DoS
-    function isDueno() { 
-      return conAuth() && (docData().uid == request.auth.uid || docData().userId == request.auth.uid || docData().email == request.auth.token.email); 
-    } // Valida propiedad de forma automática
+    function isDueno() {
+      return request.auth != null &&
+        (resource == null || resource.data.get('userId', resource.data.get('uid', '')) == request.auth.uid) &&
+        (request.resource == null || request.resource.data.get('userId', '') == request.auth.uid);
+    }
     // ── REGLAS DE SEGURIDAD POR COLECCIÓN ────────────────────────────────────
     match /configwii/{doc} { allow read, write: if esAdmin(); } // Config del sistema: Solo admin
     match /wiMensajes/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)

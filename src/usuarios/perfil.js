@@ -192,6 +192,14 @@ export const init = async () => {
       const d = uSnap.data();
       const cleanData = { ...d };
 
+      // Backfill automático de userId si falta en smiles
+      if (!d.userId) {
+        try {
+          await updateDoc(doc(db, 'smiles', uLocal.usuario), { userId: uLocal.uid });
+          cleanData.userId = uLocal.uid;
+        } catch (err) { console.warn('Error backfilling userId in smiles:', err); }
+      }
+
       // Convertir a formatos JSON serializables idénticos a los del localStorage
       if (cleanData.fechaNacimiento) {
         try {
@@ -229,8 +237,14 @@ export const init = async () => {
         usuario: uLocal.usuario,
         email: uLocal.email,
         uid: uLocal.uid,
+        userId: uLocal.uid,
         creado: uLocal.creado || serverTimestamp()
       });
+    } else if (!regSnap.data().userId) {
+      // Backfill automático de userId si falta en registros
+      try {
+        await updateDoc(regRef, { userId: uLocal.uid });
+      } catch (err) { console.warn('Error backfilling userId in registros:', err); }
     }
   } catch (e) {
     console.warn('Sync Firestore perfil/registros error:', e);
@@ -271,6 +285,7 @@ export const init = async () => {
       genero: generoVal,
       gustos: gustosVal,
       bio: bioVal,
+      userId: u.uid,
       ultActividad: serverTimestamp()
     };
 
@@ -285,6 +300,7 @@ export const init = async () => {
         usuario: u.usuario,
         email: u.email,
         uid: u.uid,
+        userId: u.uid,
         actualizado: serverTimestamp()
       }, { merge: true });
 
