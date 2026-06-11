@@ -9,11 +9,9 @@ service cloud.firestore {
     function esEditor() { return conAuth() && getRol() in ['editor', 'gestor', 'admin']; } // Helper explícito para editores
     function esUsuario()  { return conAuth() && getRol() == 'usuario'; } // Helper explícito para usuarios estándar
     function maxSize(kb)  { return request.resource == null || request.resource.data.size() < kb * 1024; } // Convierte KB a Bytes (ej: 20 KB = 20480 bytes) para evitar DoS
-    function esDueno() {
-      return request.auth != null &&
-        (resource == null || resource.data.get('userId', resource.data.get('uid', '')) == request.auth.uid) &&
-        (request.resource == null || request.resource.data.get('userId', '') == request.auth.uid);
-    }
+    function maxLimit(n) { return request.query.limit == null || request.query.limit <= n; }
+ 		function esDueno() { return conAuth() && (resource == null ? request.resource.data.userId == request.auth.uid : resource.data.userId == request.auth.uid);}
+    
     // ── REGLAS DE SEGURIDAD POR COLECCIÓN ────────────────────────────────────
     match /configwii/{doc} { allow read, write: if esAdmin(); } // Config del sistema: Solo admin
     match /wiMensajes/{doc}    { allow read: if esDueno(); allow write: if esDueno() && maxSize(20); } // (máx 20KB)
@@ -53,7 +51,7 @@ service cloud.firestore {
       allow create, delete: if esEditor(); // Solo editor, gestor, admin pueden crear post 
       allow update: if esEditor() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vistas','likes']); // Publico puede actualizar vistas y likes
     }
-    match /equipos/{doc} {allow read, write: if esDueno() && maxSize(10); } // Equipos del usuario: solo el dueño (userId) lee/escribe su configuración. Límite 10KB.
+    match /equipos/{doc} {allow read, write: if esDueno() && maxLimit(7) && maxSize(10); }// Equipos del usuario: solo el dueño (userId) lee/escribe su configuración. Límite 10KB.
     match /pcs/{doc} {
       allow read: if conAuth(); // Validación AnyDesk: cualquier usuario autenticado puede leer y traducir el código de 9 dígitos.
       allow write: if esDueno() && maxSize(10); // Registro de PC: solo el dueño (userId) puede registrar o actualizar su código único. Límite 10KB.
