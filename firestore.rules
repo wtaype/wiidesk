@@ -9,32 +9,27 @@ service cloud.firestore {
     function esEditor() { return conAuth() && getRol() in ['editor', 'gestor', 'admin']; } // Helper explícito para editores
     function esUsuario()  { return conAuth() && getRol() == 'usuario'; } // Helper explícito para usuarios estándar
     function maxSize(kb)  { return request.resource == null || request.resource.data.size() < kb * 1024; } // Convierte KB a Bytes (ej: 20 KB = 20480 bytes) para evitar DoS
-    function isDueno() {
+    function esDueno() {
       return request.auth != null &&
         (resource == null || resource.data.get('userId', resource.data.get('uid', '')) == request.auth.uid) &&
         (request.resource == null || request.resource.data.get('userId', '') == request.auth.uid);
     }
-    function esDuenoEquipo() {
-      return request.auth != null &&
-        (resource == null || resource.data.userId == request.auth.uid) &&
-        (request.resource == null || request.resource.data.userId == request.auth.uid);
-    }
     // ── REGLAS DE SEGURIDAD POR COLECCIÓN ────────────────────────────────────
     match /configwii/{doc} { allow read, write: if esAdmin(); } // Config del sistema: Solo admin
-    match /wiMensajes/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
-    match /wiNotas/{doc}       { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
-    match /wiSolicitudes/{doc} { allow read: if isDueno() || esGestor(); allow write: if (isDueno() || esGestor()) && maxSize(20); } // (máx 20KB)
+    match /wiMensajes/{doc}    { allow read: if esDueno(); allow write: if esDueno() && maxSize(20); } // (máx 20KB)
+    match /wiNotas/{doc}       { allow read: if esDueno(); allow write: if esDueno() && maxSize(20); } // (máx 20KB)
+    match /wiSolicitudes/{doc} { allow read: if esDueno() || esGestor(); allow write: if (esDueno() || esGestor()) && maxSize(20); } // (máx 20KB)
     match /smiles/{u} { // Primero, Firebase Auth verifica → Firestore confirma ownership luego hacen login seguro.
       allow get:    if conAuth() && (resource.data.get('uid','') == request.auth.uid || esEditor());
       allow list:   if esEditor();
-      allow delete: if esGestor() || isDueno();
+      allow delete: if esGestor() || esDueno();
       allow create: if conAuth() && request.resource.data.uid == request.auth.uid
                                  && request.resource.data.rol == 'usuario'
                                  && request.resource.data.plan == 'free'
                                  && request.resource.data.activo == true
                                  && request.resource.data.estado == 'activo'
                                  && maxSize(10);
-      allow update: if ((isDueno() || resource.data.get('uid','') == request.auth.uid)
+      allow update: if ((esDueno() || resource.data.get('uid','') == request.auth.uid)
                         && request.resource.data.rol  == resource.data.rol
                         && request.resource.data.plan == resource.data.plan
                         && maxSize(10)) || esGestor();
@@ -45,23 +40,24 @@ service cloud.firestore {
       allow create: if conAuth() && request.resource.data.uid == request.auth.uid 
                                  && request.resource.data.usuario == u 
                                  && maxSize(2); // (máx 2KB)
-      allow update: if isDueno() && maxSize(2); // (máx 2KB)
+      allow update: if esDueno() && maxSize(2); // (máx 2KB)
       allow delete: if esAdmin(); // Solo admin borra
     }
     match /chatGrupal/{doc} {
-      allow get: if conAuth() && (isDueno() || esEditor()); // Lectura personal y editores 
+      allow get: if conAuth() && (esDueno() || esEditor()); // Lectura personal y editores 
       allow list:   if esEditor(); // Listar 
-      allow write: if isDueno(); // Solo dueño puede editar
+      allow write: if esDueno(); // Solo dueño puede editar
     }
     match /blog/{doc} { // Blog (Público)
       allow read: if true; // Lectura publica 
       allow create, delete: if esEditor(); // Solo editor, gestor, admin pueden crear post 
       allow update: if esEditor() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vistas','likes']); // Publico puede actualizar vistas y likes
     }
-    match /equipos/{doc} { allow read, write: if esDuenoEquipo() && maxSize(10);} // Equipos del usuario: solo el dueño (userId) lee/escribe su configuración. Límite 10KB.
+    match /equipos/{doc} {allow read, write: if esDueno() && maxSize(10); } // Equipos del usuario: solo el dueño (userId) lee/escribe su configuración. Límite 10KB.
     match /pcs/{doc} {
       allow read: if conAuth(); // Validación AnyDesk: cualquier usuario autenticado puede leer y traducir el código de 9 dígitos.
-      allow write: if isDueno() && maxSize(10); // Registro de PC: solo el dueño (userId) puede registrar o actualizar su código único. Límite 10KB.
+      allow write: if esDueno() && maxSize(10); // Registro de PC: solo el dueño (userId) puede registrar o actualizar su código único. Límite 10KB.
     }
+    match /lab/{doc} {allow read, write: if esDueno()}
   }
 }
