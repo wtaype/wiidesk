@@ -14,6 +14,11 @@ service cloud.firestore {
         (resource == null || resource.data.get('userId', resource.data.get('uid', '')) == request.auth.uid) &&
         (request.resource == null || request.resource.data.get('userId', '') == request.auth.uid);
     }
+    function esDuenoEquipo() {
+      return request.auth != null &&
+        (resource == null || resource.data.userId == request.auth.uid) &&
+        (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
     // ── REGLAS DE SEGURIDAD POR COLECCIÓN ────────────────────────────────────
     match /configwii/{doc} { allow read, write: if esAdmin(); } // Config del sistema: Solo admin
     match /wiMensajes/{doc}    { allow read: if isDueno(); allow write: if isDueno() && maxSize(20); } // (máx 20KB)
@@ -53,7 +58,7 @@ service cloud.firestore {
       allow create, delete: if esEditor(); // Solo editor, gestor, admin pueden crear post 
       allow update: if esEditor() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vistas','likes']); // Publico puede actualizar vistas y likes
     }
-    match /equipos/{doc} {allow read, write: if isDueno() && maxSize(10); } // Equipos del usuario: solo el dueño (userId) lee/escribe su configuración. Límite 10KB.
+    match /equipos/{doc} { allow read, write: if esDuenoEquipo() && maxSize(10);} // Equipos del usuario: solo el dueño (userId) lee/escribe su configuración. Límite 10KB.
     match /pcs/{doc} {
       allow read: if conAuth(); // Validación AnyDesk: cualquier usuario autenticado puede leer y traducir el código de 9 dígitos.
       allow write: if isDueno() && maxSize(10); // Registro de PC: solo el dueño (userId) puede registrar o actualizar su código único. Límite 10KB.
